@@ -8,7 +8,7 @@ import io
 import re
 
 st.set_page_config(
-    page_title="CV Reviewer",
+    page_title="RedPen",
     page_icon="icon.png",
     layout="wide",
 )
@@ -309,7 +309,7 @@ with left_col:
     st.markdown("""
     <div style="padding:2.5rem 0 2rem;">
         <div style="font-size:2.6rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:0.5rem;">
-            CV Reviewer
+            Welcome to RedPen
         </div>
         <div style="color:#888; font-size:1rem; line-height:1.6;">
             Upload your CV and get sharp, structured feedback in seconds.<br>
@@ -322,6 +322,9 @@ with left_col:
         "Upload your CV — PDF or Word",
         type=["pdf", "docx"],
     )
+
+    if not uploaded_file:
+        st.session_state.feedback = None
 
     job_description = st.text_area(
         "Job Description (optional)",
@@ -393,7 +396,7 @@ else:
 st.markdown("""
 <div style="margin-top:2rem; padding:1rem 0; border-top:1px solid #6f6f6f; text-align:center;">
     <div style="color:#6f6f6f; font-size:0.78rem;">
-        © 2026 Huzaifa Najam. All rights reserved.
+        © 2026 RedPen by Huzaifa Najam. All rights reserved.
     </div>
     <div style="color:#6f6f6f; font-size:0.73rem; margin-top:0.3rem; line-height:1.5;">
         Your CV is sent to Google Gemini for processing and is not stored.

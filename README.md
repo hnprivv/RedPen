@@ -1,4 +1,4 @@
-# CV Reviewer
+# RedPen
 
 An AI-powered CV reviewer built with Streamlit and Google Gemini. Upload a CV and get structured, specific feedback in seconds, not a wall of generic suggestions, but actionable critique tied to actual content in your document.
 
@@ -32,8 +32,8 @@ Most CV reviewers break on PDFs exported from Canva or similar tools because the
 ## Running locally
 
 ```bash
-git clone https://github.com/hnprivv/CV-Reviewer
-cd CV-Reviewer
+git clone https://github.com/hnprivv/RedPen
+cd RedPen
 python -m venv venv
 venv\Scripts\activate        # Windows
 source venv/bin/activate     # macOS/Linux
