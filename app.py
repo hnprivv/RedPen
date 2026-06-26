@@ -128,6 +128,7 @@ Never deviate from this format regardless of CV language or content:
 [One single change — the highest-impact edit they could make in the next 10 minutes. Be direct and specific.]
 
 Rules you must follow:
+- Always address the user directly using "you" and "your" — never refer to them as "the candidate" or by name.
 - Reference actual content from the CV (job titles, company names, specific phrases). Never give feedback that could apply to any CV.
 - "Fix" examples must be concrete rewrites or specific actions, not suggestions like "add more detail."
 - If the CV mixes languages (e.g. Urdu and English), review it fully — do not flag the language mix as a problem unless it genuinely hurts clarity.
@@ -178,6 +179,7 @@ Never deviate from this format regardless of CV language or content:
 [The single change that would most improve this CV's chances for this specific role. Be direct and specific.]
 
 Rules you must follow:
+- Always address the user directly using "you" and "your" — never refer to them as "the candidate" or by name.
 - Always tie Gaps feedback to specific content in both the CV and the job description.
 - Areas for Improvement should be role-agnostic CV quality issues.
 - "Fix" examples must be concrete rewrites or specific actions, not suggestions like "add more detail."
