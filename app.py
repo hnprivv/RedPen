@@ -5,6 +5,7 @@ from docx import Document
 import tempfile
 import os
 import io
+import re
 
 st.set_page_config(
     page_title="CV Reviewer",
@@ -12,16 +13,87 @@ st.set_page_config(
     layout="centered",
 )
 
-st.markdown(
-    """
-    <style>
-    .block-container p, .block-container li {
-        text-align: justify;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+st.markdown("""
+<style>
+#MainMenu, footer, header { visibility: hidden; }
+
+html, body, [class*="css"] {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.card-body p, .card-body li {
+    text-align: justify;
+}
+
+[data-testid="stFileUploader"] {
+    border: 2px dashed #2e2e2e;
+    border-radius: 12px;
+    padding: 0.5rem;
+    background: #0f0f0f;
+}
+
+textarea {
+    background: #0f0f0f !important;
+    border: 1px solid #2e2e2e !important;
+    border-radius: 10px !important;
+    color: #e0e0e0 !important;
+    font-size: 0.9rem !important;
+}
+
+div[data-testid="stButton"] > button {
+    width: 100%;
+    background: #1a56db;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: background 0.2s;
+}
+div[data-testid="stButton"] > button:hover {
+    background: #1446c0;
+    color: white;
+    border: none;
+}
+
+.cv-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #1a56db40;
+    border-top-color: #1a56db;
+    border-radius: 50%;
+    animation: cv-spin 0.8s linear infinite;
+    display: inline-block;
+}
+@keyframes cv-spin {
+    to { transform: rotate(360deg); }
+}
+
+div[data-testid="stDownloadButton"] > button {
+    width: 100%;
+    background: transparent;
+    color: #4a9eff;
+    border: 1px solid #4a9eff;
+    border-radius: 10px;
+    padding: 0.6rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-top: 0.5rem;
+}
+div[data-testid="stDownloadButton"] > button:hover {
+    background: #4a9eff18;
+    color: #4a9eff;
+    border: 1px solid #4a9eff;
+}
+
+hr { border-color: #2e2e2e; }
+</style>
+""", unsafe_allow_html=True)
+
+# --- Prompts ---
 
 PROMPT_CV_ONLY = """You are an expert CV reviewer with 15 years of experience in recruitment across tech, finance, and consulting.
 You review CVs with sharp, specific feedback, you never give vague advice.
@@ -111,6 +183,68 @@ Rules you must follow:
 - Keep the total response under 600 words.
 """
 
+# --- Section card config ---
+
+SECTION_CONFIG = {
+    "overall impression": ("🔍 Overall Impression", "#0d1b2a", "#4a9eff"),
+    "strengths":          ("✅ Strengths",           "#0a1f12", "#43a047"),
+    "job fit":            ("🎯 Job Fit",             "#0d1b2a", "#2196f3"),
+    "gaps":               ("⚠️ Gaps",               "#1f1500", "#ffa726"),
+    "areas for improvement": ("🔧 Areas for Improvement", "#1f1200", "#ef6c00"),
+    "quick win":          ("⚡ Quick Win",           "#160b2e", "#ab47bc"),
+}
+
+def md_to_html(text: str) -> str:
+    text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
+    lines = text.strip().split('\n')
+    html, in_ul = [], False
+    for line in lines:
+        s = line.strip()
+        if not s:
+            if in_ul:
+                html.append('</ul>')
+                in_ul = False
+            continue
+        if s.startswith('- '):
+            if not in_ul:
+                html.append('<ul style="padding-left:1.2rem;margin:0.5rem 0;">')
+                in_ul = True
+            html.append(f'<li style="margin-bottom:0.5rem;">{s[2:]}</li>')
+        else:
+            if in_ul:
+                html.append('</ul>')
+                in_ul = False
+            html.append(f'<p style="margin:0.4rem 0;">{s}</p>')
+    if in_ul:
+        html.append('</ul>')
+    return '\n'.join(html)
+
+def render_feedback(feedback: str):
+    parts = re.split(r'\n?## ', feedback.strip())
+    for part in parts:
+        if not part.strip():
+            continue
+        lines = part.strip().split('\n', 1)
+        header_raw = lines[0].strip().lstrip('#').strip()
+        body = lines[1].strip() if len(lines) > 1 else ""
+        key = header_raw.lower()
+        display_title, bg, accent = SECTION_CONFIG.get(key, (header_raw, "#1a1a1a", "#888"))
+        body_html = md_to_html(body)
+        st.markdown(f"""
+        <div style="background:{bg}; border-left:4px solid {accent}; border-radius:10px;
+                    padding:1.25rem 1.5rem; margin-bottom:1rem; color:#e0e0e0;">
+            <div style="color:{accent}; font-weight:700; font-size:1rem;
+                        margin-bottom:0.75rem; letter-spacing:0.01em;">
+                {display_title}
+            </div>
+            <div class="card-body">
+                {body_html}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+# --- Extraction ---
+
 def extract_text_from_docx(file_bytes: bytes) -> str:
     doc = Document(io.BytesIO(file_bytes))
     W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -120,6 +254,8 @@ def extract_text_from_docx(file_bytes: bytes) -> str:
         if elem.text
     ]
     return " ".join(texts)
+
+# --- Gemini ---
 
 def review_cv(file_bytes: bytes, ext: str, api_key: str, job_description: str) -> str:
     client = genai.Client(api_key=api_key)
@@ -162,43 +298,71 @@ def review_cv(file_bytes: bytes, ext: str, api_key: str, job_description: str) -
 
 # --- UI ---
 
-st.title("CV Reviewer")
-st.caption("Upload your CV and get structured, specific feedback in seconds.")
+st.markdown("""
+<div style="text-align:center; padding:2.5rem 0 2rem;">
+    <div style="font-size:2.6rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:0.5rem;">
+        CV Reviewer
+    </div>
+    <div style="color:#888; font-size:1rem; max-width:480px; margin:0 auto; line-height:1.6;">
+        Upload your CV and get sharp, structured feedback in seconds.<br>
+        Paste a job description to unlock a role-specific gap analysis.
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 uploaded_file = st.file_uploader(
-    "Upload your CV (PDF or Word)",
+    "Upload your CV — PDF or Word",
     type=["pdf", "docx"],
-    label_visibility="collapsed",
 )
 
 job_description = st.text_area(
-    "Job description (optional)",
-    placeholder="Paste the job description here to get a gap analysis against this specific role." \
-    "The system will review your CV against this job description and provide feedback on how well you are positioned for this role.",
-    height=160,
+    "Job Description (optional)",
+    placeholder="Give the job description for a role you're applying to, and we'll analyze how well your CV fits.",
+    height=150,
 )
 
-if uploaded_file:
+run = st.button("Submit")
+status_placeholder = st.empty()
+
+if run:
+    if not uploaded_file:
+        st.warning("Please upload a CV first.")
+        st.stop()
+
     file_bytes = uploaded_file.read()
     ext = uploaded_file.name.rsplit(".", 1)[-1].lower()
+    api_key = st.secrets.get("GEMINI_API_KEY", "")
 
-    with st.spinner("Reviewing..."):
-        try:
-            feedback = review_cv(
-                file_bytes, ext,
-                st.secrets.get("GEMINI_API_KEY", ""),
-                job_description,
-            )
-        except Exception as e:
-            st.error(f"Review failed: {e}")
-            st.stop()
+    if not api_key:
+        st.error("GEMINI_API_KEY not found. Add it to .streamlit/secrets.toml.")
+        st.stop()
+
+    status_placeholder.markdown("""
+    <div style="display:flex;align-items:center;gap:0.75rem;
+                background:#0d1b2a;border:1px solid #1a56db;border-radius:10px;
+                padding:0.75rem 1.25rem;margin-top:0.5rem;">
+        <div class="cv-spinner"></div>
+        <span style="color:#a0b8d8;font-size:0.92rem;font-weight:500;">
+            Reviewing your CV, may take a few seconds...
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    try:
+        feedback = review_cv(file_bytes, ext, api_key, job_description)
+    except Exception as e:
+        status_placeholder.empty()
+        st.error(f"Review failed: {e}")
+        st.stop()
+
+    status_placeholder.empty()
 
     st.divider()
-    st.markdown(feedback)
+    render_feedback(feedback)
     st.divider()
 
     st.download_button(
-        label="Download Feedback",
+        label="Download Feedback as Markdown",
         data=feedback,
         file_name="cv_feedback.md",
         mime="text/markdown",
