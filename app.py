@@ -87,6 +87,11 @@ hr { border-color: #2e2e2e; }
     position: sticky;
     top: 2rem;
 }
+@media (max-width: 768px) {
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child {
+        position: static;
+    }
+}
 </style>
 """, unsafe_allow_html=True)
 
