@@ -10,7 +10,7 @@ import re
 st.set_page_config(
     page_title="CV Reviewer",
     page_icon="📄",
-    layout="centered",
+    layout="wide",
 )
 
 st.markdown("""
@@ -72,24 +72,21 @@ div[data-testid="stButton"] > button:hover {
     to { transform: rotate(360deg); }
 }
 
-div[data-testid="stDownloadButton"] > button {
-    width: 100%;
-    background: transparent;
-    color: #4a9eff;
-    border: 1px solid #4a9eff;
-    border-radius: 10px;
-    padding: 0.6rem 1rem;
-    font-size: 0.95rem;
-    font-weight: 500;
-    margin-top: 0.5rem;
-}
-div[data-testid="stDownloadButton"] > button:hover {
-    background: #4a9eff18;
-    color: #4a9eff;
-    border: 1px solid #4a9eff;
-}
 
 hr { border-color: #2e2e2e; }
+
+@keyframes cardEnter {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+[data-testid="stHorizontalBlock"] {
+    align-items: flex-start;
+}
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child {
+    position: sticky;
+    top: 2rem;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -221,6 +218,7 @@ def md_to_html(text: str) -> str:
 
 def render_feedback(feedback: str):
     parts = re.split(r'\n?## ', feedback.strip())
+    index = 0
     for part in parts:
         if not part.strip():
             continue
@@ -230,9 +228,12 @@ def render_feedback(feedback: str):
         key = header_raw.lower()
         display_title, bg, accent = SECTION_CONFIG.get(key, (header_raw, "#1a1a1a", "#888"))
         body_html = md_to_html(body)
+        delay = index * 0.12
         st.markdown(f"""
         <div style="background:{bg}; border-left:4px solid {accent}; border-radius:10px;
-                    padding:1.25rem 1.5rem; margin-bottom:1rem; color:#e0e0e0;">
+                    padding:1.25rem 1.5rem; margin-bottom:1rem; color:#e0e0e0;
+                    opacity:0; animation:cardEnter 0.4s ease forwards;
+                    animation-delay:{delay}s;">
             <div style="color:{accent}; font-weight:700; font-size:1rem;
                         margin-bottom:0.75rem; letter-spacing:0.01em;">
                 {display_title}
@@ -242,6 +243,7 @@ def render_feedback(feedback: str):
             </div>
         </div>
         """, unsafe_allow_html=True)
+        index += 1
 
 # --- Extraction ---
 
@@ -298,35 +300,45 @@ def review_cv(file_bytes: bytes, ext: str, api_key: str, job_description: str) -
 
 # --- UI ---
 
-st.markdown("""
-<div style="text-align:center; padding:2.5rem 0 2rem;">
-    <div style="font-size:2.6rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:0.5rem;">
-        CV Reviewer
+if "feedback" not in st.session_state:
+    st.session_state.feedback = None
+
+left_col, right_col = st.columns([1, 1.4], gap="large")
+
+with left_col:
+    st.markdown("""
+    <div style="padding:2.5rem 0 2rem;">
+        <div style="font-size:2.6rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:0.5rem;">
+            CV Reviewer
+        </div>
+        <div style="color:#888; font-size:1rem; line-height:1.6;">
+            Upload your CV and get sharp, structured feedback in seconds.<br>
+            Paste a job description to unlock a role-specific gap analysis.
+        </div>
     </div>
-    <div style="color:#888; font-size:1rem; max-width:480px; margin:0 auto; line-height:1.6;">
-        Upload your CV and get sharp, structured feedback in seconds.<br>
-        Paste a job description to unlock a role-specific gap analysis.
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader(
-    "Upload your CV — PDF or Word",
-    type=["pdf", "docx"],
-)
+    uploaded_file = st.file_uploader(
+        "Upload your CV — PDF or Word",
+        type=["pdf", "docx"],
+    )
 
-job_description = st.text_area(
-    "Job Description (optional)",
-    placeholder="Give the job description for a role you're applying to, and we'll analyze how well your CV fits.",
-    height=150,
-)
+    job_description = st.text_area(
+        "Job Description (optional)",
+        placeholder="Paste the job description for a role you're applying to, and we'll analyze how well your CV fits.",
+        height=150,
+    )
 
-run = st.button("Submit")
-status_placeholder = st.empty()
+    run = st.button("Submit")
+    status_placeholder = st.empty()
+
+right_placeholder = right_col.empty()
+
 
 if run:
     if not uploaded_file:
-        st.warning("Please upload a CV first.")
+        with left_col:
+            st.warning("Please upload a CV first.")
         st.stop()
 
     file_bytes = uploaded_file.read()
@@ -334,7 +346,8 @@ if run:
     api_key = st.secrets.get("GEMINI_API_KEY", "")
 
     if not api_key:
-        st.error("GEMINI_API_KEY not found. Add it to .streamlit/secrets.toml.")
+        with left_col:
+            st.error("GEMINI_API_KEY not found. Add it to .streamlit/secrets.toml.")
         st.stop()
 
     status_placeholder.markdown("""
@@ -343,27 +356,48 @@ if run:
                 padding:0.75rem 1.25rem;margin-top:0.5rem;">
         <div class="cv-spinner"></div>
         <span style="color:#a0b8d8;font-size:0.92rem;font-weight:500;">
-            Reviewing your CV, may take a few seconds...
+            Reviewing your CV — this takes a few seconds...
         </span>
     </div>
     """, unsafe_allow_html=True)
 
     try:
-        feedback = review_cv(file_bytes, ext, api_key, job_description)
+        st.session_state.feedback = review_cv(file_bytes, ext, api_key, job_description)
     except Exception as e:
         status_placeholder.empty()
-        st.error(f"Review failed: {e}")
+        with left_col:
+            st.error(f"Review failed: {e}")
         st.stop()
 
     status_placeholder.empty()
 
-    st.divider()
-    render_feedback(feedback)
-    st.divider()
+if st.session_state.feedback:
+    with right_placeholder.container():
+        render_feedback(st.session_state.feedback)
+else:
+    right_placeholder.markdown("""
+    <div style="border:2px dashed #2e2e2e; border-radius:12px;
+                height:500px; display:flex; flex-direction:column;
+                align-items:center; justify-content:center; gap:0.75rem;
+                margin-top:2.5rem;">
+        <div style="font-size:1.5rem;">📋</div>
+        <div style="color:#444; font-size:0.95rem; font-weight:500;">
+            Your feedback will appear here.
+        </div>
+        <div style="color:#333; font-size:0.82rem;">
+            Upload a CV and click Submit to get started.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.download_button(
-        label="Download Feedback as Markdown",
-        data=feedback,
-        file_name="cv_feedback.md",
-        mime="text/markdown",
-    )
+st.markdown("""
+<div style="margin-top:2rem; padding:1rem 0; border-top:1px solid #6f6f6f; text-align:center;">
+    <div style="color:#6f6f6f; font-size:0.78rem;">
+        © 2026 Huzaifa Najam. All rights reserved.
+    </div>
+    <div style="color:#6f6f6f; font-size:0.73rem; margin-top:0.3rem; line-height:1.5;">
+        Your CV is sent to Google Gemini for processing and is not stored.
+        Do not upload documents containing sensitive personal data beyond standard CV content.
+    </div>
+</div>
+""", unsafe_allow_html=True)
