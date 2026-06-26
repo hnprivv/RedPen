@@ -91,12 +91,12 @@ def review_cv(file_bytes: bytes, ext: str, api_key: str) -> str:
         contents = f"Please review this CV:\n\n{cv_text}"
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.1-flash-lite",
         contents=contents,
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
             temperature=0.4,
-            max_output_tokens=1500,
+            max_output_tokens=3000,
         ),
     )
     return response.text
