@@ -9,7 +9,7 @@ import re
 
 st.set_page_config(
     page_title="CV Reviewer",
-    page_icon="📄",
+    page_icon="icon.png",
     layout="wide",
 )
 
