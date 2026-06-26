@@ -193,7 +193,7 @@ SECTION_CONFIG = {
     "overall impression": ("🔍 Overall Impression", "#0d1b2a", "#4a9eff"),
     "strengths":          ("✅ Strengths",           "#0a1f12", "#43a047"),
     "job fit":            ("🎯 Job Fit",             "#0d1b2a", "#2196f3"),
-    "gaps":               ("⚠️ Gaps",               "#1f1500", "#ffa726"),
+    "gaps":               ("⚠️ Gaps",               "#1f0a0a", "#e53935"),
     "areas for improvement": ("🔧 Areas for Improvement", "#1f1200", "#ef6c00"),
     "quick win":          ("⚡ Quick Win",           "#160b2e", "#ab47bc"),
 }
