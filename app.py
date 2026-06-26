@@ -304,7 +304,6 @@ def review_cv(file_bytes: bytes, ext: str, api_key: str, job_description: str) -
     )
     return response.text
 
-
 # --- UI ---
 
 if "feedback" not in st.session_state:
@@ -344,43 +343,6 @@ with left_col:
 
 right_placeholder = right_col.empty()
 
-
-if run:
-    if not uploaded_file:
-        with left_col:
-            st.warning("Please upload a CV first.")
-        st.stop()
-
-    file_bytes = uploaded_file.read()
-    ext = uploaded_file.name.rsplit(".", 1)[-1].lower()
-    api_key = st.secrets.get("GEMINI_API_KEY", "")
-
-    if not api_key:
-        with left_col:
-            st.error("GEMINI_API_KEY not found. Add it to .streamlit/secrets.toml.")
-        st.stop()
-
-    status_placeholder.markdown("""
-    <div style="display:flex;align-items:center;gap:0.75rem;
-                background:#0d1b2a;border:1px solid #1a56db;border-radius:10px;
-                padding:0.75rem 1.25rem;margin-top:0.5rem;">
-        <div class="cv-spinner"></div>
-        <span style="color:#a0b8d8;font-size:0.92rem;font-weight:500;">
-            Reviewing your CV — this takes a few seconds...
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
-
-    try:
-        st.session_state.feedback = review_cv(file_bytes, ext, api_key, job_description)
-    except Exception as e:
-        status_placeholder.empty()
-        with left_col:
-            st.error(f"Review failed: {e}")
-        st.stop()
-
-    status_placeholder.empty()
-
 if st.session_state.feedback:
     with right_placeholder.container():
         render_feedback(st.session_state.feedback)
@@ -411,3 +373,44 @@ st.markdown("""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+if run:
+    if not uploaded_file:
+        status_placeholder.warning("Please upload a CV first.")
+        st.stop()
+
+    file_bytes = uploaded_file.read()
+    ext = uploaded_file.name.rsplit(".", 1)[-1].lower()
+    api_key = st.secrets.get("GEMINI_API_KEY", "")
+
+    if not api_key:
+        status_placeholder.error("GEMINI_API_KEY not found. Add it to .streamlit/secrets.toml.")
+        st.stop()
+
+    status_placeholder.markdown("""
+    <div style="display:flex;align-items:center;gap:0.75rem;
+                background:#0d1b2a;border:1px solid #1a56db;border-radius:10px;
+                padding:0.75rem 1.25rem;margin-top:0.5rem;">
+        <div class="cv-spinner"></div>
+        <span style="color:#a0b8d8;font-size:0.92rem;font-weight:500;">
+            Reviewing your CV — this takes a few seconds...
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    try:
+        st.session_state.feedback = review_cv(file_bytes, ext, api_key, job_description)
+    except Exception as e:
+        err = str(e)
+        if "429" in err or "resource_exhausted" in err.lower():
+            msg = "RedPen is getting a lot of traffic right now. Please try again in a minute."
+        elif any(x in err for x in ["401", "403", "unauthenticated", "permission"]):
+            msg = "Something went wrong on our end. Please try again shortly."
+        else:
+            msg = "Something went wrong. Please try again."
+        status_placeholder.error(msg)
+        st.stop()
+
+    status_placeholder.empty()
+    with right_placeholder.container():
+        render_feedback(st.session_state.feedback)
