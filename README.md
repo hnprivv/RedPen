@@ -1,5 +1,7 @@
 # RedPen
 
+![Regression Tests](https://github.com/hnprivv/RedPen/actions/workflows/regression.yml/badge.svg)
+
 An AI-powered CV reviewer built with Streamlit and Google Gemini. Upload a CV and get structured, specific feedback in seconds, not a wall of generic suggestions, but actionable critique tied to actual content in your document.
 
 Optionally paste a job description to switch into gap analysis mode, where the tool compares your CV against the role and tells you exactly what's missing and how to fix it.
@@ -50,6 +52,13 @@ Get a free key at [aistudio.google.com](https://aistudio.google.com).
 ```bash
 streamlit run app.py
 ```
+
+## Testing
+
+RedPen has a full regression suite: fast unit tests for the pure logic (`core.py`), structural
+checks against the live Gemini API, and a Playwright-driven UI checklist — all documented in
+[TESTING.md](TESTING.md) and run automatically on every push to `main` via GitHub Actions, with
+dated reports committed to [`regression-tests/`](regression-tests/).
 
 ## Deploying to Streamlit Cloud
 
