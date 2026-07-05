@@ -9,7 +9,14 @@ RedPen has three layers, each tested differently:
    `render_feedback` to render correctly (section headers, word-count ceilings). Covered by
    pytest tests marked `live`, which hit the real Gemini API and are excluded from the default run.
 3. **Streamlit UI flow** — file upload, button, spinner, error banners, card rendering. Covered by
-   a manual checklist (no automated UI test framework in this project).
+   a checklist (`regression-tests/checklist.py`) driven by headless Chromium via Playwright — it
+   drives the real running app exactly as a user would, rather than mocking anything.
+
+## Full automation (CI)
+
+`.github/workflows/regression.yml` runs all three layers on every push to `main` and commits a
+dated report to [`regression-tests/`](regression-tests/) — see that directory's README for the
+naming convention, how to run the same pass locally, and why it's scoped to `main` only.
 
 ## Setup
 
@@ -56,9 +63,11 @@ break the mapping between Gemini's output and the rendered cards.
 | L2 | CV+JD prompt | fixture CV + sample JD | response contains all six expected headers; ≤ ~600 words |
 | L3 | CV-only prompt | fixture CV | response never says "the candidate" (must address the user directly) |
 
-## Manual UI checklist (`app.py`)
+## UI checklist (`app.py`)
 
-Run this pass before any release, and whenever `app.py`'s UI code changes.
+Run automatically in CI on every push to `main` via `regression-tests/checklist.py`. The table
+below is the reference for what each ID verifies; run it by hand (see `regression-tests/README.md`)
+or wait for the next `main` push if you need an ad hoc check sooner.
 
 | ID | Steps | Expected |
 |----|-------|----------|
