@@ -9,5 +9,16 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping deployed app to prevent Streamlit Cloud hibernation
-        run: curl -fsS --max-time 30 https://redpen-by-hn.streamlit.app/ -o /dev/null
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Visit deployed app to prevent Streamlit Cloud hibernation
+        run: python .github/scripts/keep_alive.py
